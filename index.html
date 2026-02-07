@@ -1,3 +1,380 @@
 <!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AgroMaster - Estação Experimental</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-<html lang="pt-pt"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>AgroMaster - Terminal de Controlo</title> <script src="https://cdn.tailwindcss.com"></script> <style> @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap'); body { background: #000; color: #00ff41; font-family: 'Share Tech Mono', monospace; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; } .monitor { width: 95vw; max-width: 450px; border: 2px solid #00ff41; padding: 20px; background: rgba(0, 10, 0, 0.9); box-shadow: 0 0 20px rgba(0, 255, 65, 0.2); } .grid-campo { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; } .slot { aspect-ratio: 1; border: 1px solid #004400; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.5rem; } .slot:hover { background: rgba(0, 255, 65, 0.1); border-color: #00ff41; } .slot.active { border-color: #fff; background: #004400; box-shadow: 0 0 10px #00ff41; } .slot.done { opacity: 0.2; pointer-events: none; } button { background: transparent; border: 1px solid #00ff41; color: #00ff41; padding: 10px; width: 100%; margin-bottom: 10px; cursor: pointer; text-transform: uppercase; font-family: 'Share Tech Mono', monospace; font-size: 0.8rem; } button:hover:not(:disabled) { background: #00ff41; color: #000; } button:disabled { border-color: #002200; color: #002200; cursor: not-allowed; } .status-bar { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 11px; border-bottom: 1px solid #004400; padding-bottom: 10px; } </style> </head> <body> <div class="monitor"> <div class="status-bar"><span>SISTEMA: OK</span><span>DIA: <span id="ui-day">1</span>/25</span><span>€: <span id="ui-money">5000</span></span></div> <div id="terminal" class="text-center text-[10px] mb-4 h-4 uppercase">[ Aguardando seleção ]</div> <div class="grid-campo" id="farm-grid"></div> <div class="actions"> <button onclick="comando('scan')">🔍 Analisar Solo (100€)</button> <button onclick="comando('tratar')">💊 Tratar Praga (450€)</button> <button onclick="comando('pular')">⏩ Ignorar / Seguinte</button> <button id="next-day" onclick="proximoDia()" disabled style="border-width: 2px; margin-top: 10px; color: #fff; border-color: #fff;">Finalizar Turno</button> </div> </div> <script> let state = { money: 5000, day: 1, plots: [], selected: null, solved: 0 }; function init() { state.plots = Array(20).fill().map(() => ({ pest: Math.random() < 0.35, scanned: false, done: false })); state.solved = 0; state.selected = null; updateUI(); } function updateUI() { const grid = document.getElementById('farm-grid'); grid.innerHTML = ''; state.plots.forEach((p, i) => { const div = document.createElement('div'); div.className = slot ${p.done ? &#39;done&#39; : &#39;&#39;} ${state.selected === i ? &#39;active&#39; : &#39;&#39;}; div.innerHTML = p.scanned ? (p.pest ? '🐛' : '🌱') : '?'; div.onclick = () => { if(!p.done) { state.selected = i; updateUI(); } }; grid.appendChild(div); }); document.getElementById('ui-money').innerText = state.money; document.getElementById('ui-day').innerText = state.day; document.getElementById('next-day').disabled = state.solved < 20; } function comando(type) { if (state.selected === null) return; let p = state.plots[state.selected]; if (type === 'scan' && !p.scanned && state.money >= 100) { state.money -= 100; p.scanned = true; } else if (type === 'tratar' && p.pest && state.money >= 450) { state.money -= 450; p.pest = false; p.done = true; state.solved++; state.selected = null; } else if (type === 'pular') { p.done = true; state.solved++; state.selected = null; } updateUI(); } function proximoDia() { state.day++; state.money += 1500; init(); } init(); </script> </body> </html>
+    :root {
+      --ui-bg: #f3f4f6;
+      --retro-black: #000000;
+      --soil: #795548;
+      --soil-dark: #4e342e;
+      --soil-light: #a1887f;
+      --tree-green: #8d6e63;
+    }
+
+    body {
+      background: #e5e7eb;
+      font-family: 'Press Start 2P', cursive;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      touch-action: manipulation;
+    }
+
+    #master-container {
+      width: 1000px;
+      max-width: 98vw;
+      height: 680px;
+      max-height: 98vh;
+      background: var(--ui-bg);
+      border: 4px solid #000;
+      display: flex;
+      flex-direction: column;
+      padding: 12px;
+      box-sizing: border-box;
+      box-shadow: 10px 10px 0 rgba(0,0,0,0.1);
+      position: relative;
+    }
+
+    .status-bar {
+      background: #000;
+      color: #fff;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 4px solid #4b5563;
+      margin-bottom: 12px;
+      flex-shrink: 0;
+    }
+
+    .health-container {
+      flex: 1;
+      margin: 0 20px;
+      text-align: center;
+    }
+
+    .health-label { font-size: 7px; margin-bottom: 5px; display: block; }
+    
+    .health-bar-bg {
+      width: 100%;
+      height: 16px;
+      background: #333;
+      border: 2px solid #fff;
+      position: relative;
+    }
+
+    .health-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #ef4444 0%, #facc15 50%, #22c55e 100%);
+      width: 100%;
+      transition: width 0.5s;
+    }
+
+    .header-info { font-size: 7px; line-height: 1.4; }
+    .header-money { color: #4ade80; font-size: 9px; }
+
+    .main-game {
+      display: flex;
+      flex: 1;
+      gap: 12px;
+      min-height: 0;
+    }
+
+    .map-section {
+      flex: 1.5;
+      background: #fff;
+      border: 4px solid #000;
+      display: flex;
+      flex-direction: column;
+      padding: 6px;
+    }
+
+    .farm-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(5, 1fr);
+      gap: 5px;
+      height: 100%;
+    }
+
+    .slot {
+      background: var(--soil);
+      border: 2px solid var(--soil-dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 24px;
+      transition: all 0.1s;
+      position: relative;
+      user-select: none;
+    }
+
+    .slot.active {
+      border: 4px solid #facc15;
+      background: var(--soil-light);
+      z-index: 5;
+    }
+
+    .slot.done {
+      background: #15803d !important;
+      border-color: #064e3b;
+    }
+
+    .tree-icon {
+      width: 50%;
+      height: 50%;
+      fill: var(--tree-green);
+      opacity: 0.8;
+    }
+
+    .side-panel {
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .panel-block {
+      background: #fff;
+      border: 4px solid #000;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      background: #000;
+      color: #fff;
+      font-size: 7px;
+      padding: 6px;
+      text-align: center;
+    }
+
+    .report-content {
+      padding: 10px;
+      flex: 1;
+      font-size: 7px;
+      line-height: 1.3;
+    }
+
+    .data-box {
+      border: 2px solid #000;
+      margin-top: 5px;
+      padding: 5px;
+      background: #f0fdf4;
+    }
+
+    .actions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 6px;
+      background: #cbd5e1;
+    }
+
+    .action-btn {
+      background: #fff;
+      border: 2px solid #000;
+      padding: 8px;
+      text-align: left;
+      font-size: 6px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .action-btn:hover { background: #000; color: #fff; }
+    .btn-price { color: #166534; font-weight: bold; }
+
+    .ignore-btn { border-color: #b91c1c; color: #b91c1c; }
+
+    /* Ajuste Mobile */
+    @media (max-width: 600px) {
+      .main-game { flex-direction: column; overflow-y: auto; }
+      .side-panel { width: 100%; }
+      #master-container { height: auto; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="auth" class="fixed inset-0 bg-blue-950 z-50 flex items-center justify-center">
+  <div class="bg-gray-200 border-8 border-black p-8 text-center">
+    <h1 class="text-[12px] mb-4">AGROMASTER V3.7</h1>
+    <p class="text-[7px] mb-6 text-blue-800">SISTEMA DE MANEJO EXPERIMENTAL</p>
+    <input type="text" id="user-input" placeholder="NOME DO ALUNO" class="border-4 border-black p-3 w-full mb-4 outline-none uppercase text-[8px]">
+    <button onclick="start()" class="bg-green-700 text-white border-4 border-black p-3 w-full text-[8px]">ENTRAR NO CAMPO</button>
+  </div>
+</div>
+
+<div id="master-container" style="display:none;">
+  <div class="status-bar">
+    <div class="header-info">
+      ALUNO: <span id="ui-user" class="text-yellow-400">---</span><br>
+      TURNO: <span id="ui-day">1</span>/25
+    </div>
+    
+    <div class="health-container">
+      <span class="health-label">VIGOR GERAL DA CULTURA</span>
+      <div class="health-bar-bg"><div id="ui-health" class="health-bar-fill"></div></div>
+    </div>
+
+    <div class="header-info text-right">
+      CAPITAL<br>
+      <span class="header-money">$<span id="ui-money">2000</span></span>
+    </div>
+  </div>
+
+  <div class="main-game">
+    <div class="map-section">
+      <div id="grid" class="farm-grid"></div>
+    </div>
+
+    <div class="side-panel">
+      <div class="panel-block" style="height: 160px;">
+        <div class="panel-header">DIAGNÓSTICO DA PARCELA</div>
+        <div id="report" class="report-content"></div>
+      </div>
+
+      <div class="panel-block flex-1">
+        <div class="panel-header">AÇÕES TÉCNICAS RECOMENDADAS</div>
+        <div class="actions-list">
+          <button class="action-btn" onclick="act('bio')"><span>🌿 BIOLÓGICO</span> <span class="btn-price">$200</span></button>
+          <button class="action-btn" onclick="act('sel')"><span>🧪 Q. SELETIVO</span> <span class="btn-price">$350</span></button>
+          <button class="action-btn" onclick="act('tot')"><span>☢️ Q. TOTAL</span> <span class="btn-price">$500</span></button>
+          <button class="action-btn" onclick="act('h2o')"><span>💧 IRRIGAÇÃO</span> <span class="btn-price">$60</span></button>
+          <button class="action-btn" onclick="act('nut')"><span>💩 NUTRIÇÃO</span> <span class="btn-price">$150</span></button>
+          <button class="action-btn ignore-btn" onclick="act('skip')"><span>⏭️ MANTER/PULAR</span> <span>---</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const DATABASE = [
+    { n: "Solo Saudável", c: "LIMPO", d: "Planta em pleno vigor. Sem alvos biológicos.", dano: 0, nde: 0, img: "🌱" },
+    { n: "Spodoptera frugiperda", c: "LAGARTA", d: "Ataque severo no cartucho e folhas.", dano: 24, nde: 12, img: "🐛" },
+    { n: "Mosca Branca", c: "SUGADOR", d: "Presença de ninfas e fumagina.", dano: 16, nde: 8, img: "🦟" },
+    { n: "Capim Amargoso", c: "DANINHA", d: "Alta competição por recursos do solo.", dano: 35, nde: 10, img: "🌾" }
+  ];
+
+  const TREE_SVG = `<svg class="tree-icon" viewBox="0 0 24 24"><path d="M12 2L4 12h3v8h10v-8h3L12 2z"/></svg>`;
+
+  let state = { user: "", money: 2000, day: 1, health: 100, slots: [], current: 0 };
+
+  function start() {
+    const val = document.getElementById('user-input').value;
+    if(!val) return;
+    state.user = val.toUpperCase();
+    document.getElementById('ui-user').innerText = state.user;
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('master-container').style.display = 'flex';
+    initField();
+  }
+
+  function initField() {
+    state.slots = Array.from({length: 20}, (_, i) => ({
+      ...DATABASE[Math.floor(Math.random() * DATABASE.length)],
+      id: i + 1, done: false, seen: false
+    }));
+    state.current = 0;
+    render();
+  }
+
+  function render() {
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    
+    state.slots.forEach((s, i) => {
+      const div = document.createElement('div');
+      div.className = `slot ${i === state.current ? 'active' : ''} ${s.done ? 'done' : ''}`;
+      
+      if(s.done) {
+        div.innerText = "✅";
+      } else if(s.seen) {
+        div.innerText = s.img;
+      } else {
+        div.innerHTML = TREE_SVG;
+      }
+
+      div.onclick = () => { if(i === state.current) { s.seen = true; render(); } };
+      grid.appendChild(div);
+    });
+
+    document.getElementById('ui-money').innerText = state.money;
+    document.getElementById('ui-day').innerText = state.day;
+    document.getElementById('ui-health').style.width = state.health + "%";
+    updateReport();
+  }
+
+  function updateReport() {
+    const report = document.getElementById('report');
+    const s = state.slots[state.current];
+    if(!s) { report.innerHTML = "<p class='text-center py-6'>TURNO ENCERRADO!</p>"; return; }
+
+    if(!s.seen) {
+      report.innerHTML = `
+        <div class="text-blue-600 font-bold mb-1">PARCELA: Q-${s.id}</div>
+        <p class="mb-2">STATUS: AGUARDANDO MONITORAMENTO</p>
+        <div class="border-2 border-dashed border-gray-400 p-2 text-center text-[6px]">
+          TOQUE NO QUADRADO AMARELO PARA IDENTIFICAR AMEAÇAS
+        </div>
+      `;
+    } else {
+      const color = s.dano > s.nde ? 'text-red-600' : 'text-green-600';
+      report.innerHTML = `
+        <div class="text-blue-600 font-bold mb-1">PARCELA: Q-${s.id}</div>
+        <div class="font-bold mb-1 text-[8px]">${s.n.toUpperCase()}</div>
+        <div class="data-box">
+          INFESTAÇÃO: <span class="text-red-600 font-bold">${s.dano}%</span><br>
+          NÍVEL DANO ECONÔMICO (NDE): ${s.nde}%
+        </div>
+        <p class="mt-2 text-gray-500 text-[6px] italic">"${s.d}"</p>
+        <div class="mt-2 font-bold ${color}" style="font-size: 6px;">
+          DECISÃO TÉCNICA: ${s.dano > s.nde ? 'TRATAMENTO NECESSÁRIO' : 'MANTER EM OBSERVAÇÃO'}
+        </div>
+      `;
+    }
+  }
+
+  function act(type) {
+    const s = state.slots[state.current];
+    if(!s || !s.seen || s.done) return;
+    let cost = 0, effect = 0;
+    switch(type) {
+      case 'bio': cost = 200; effect = 2; break;
+      case 'sel': cost = 350; effect = 5; break;
+      case 'tot': cost = 500; effect = 12; break;
+      case 'h2o': cost = 60; state.health = Math.min(100, state.health + 4); break;
+      case 'nut': cost = 150; state.health = Math.min(100, state.health + 8); break;
+      case 'skip': cost = 0; effect = s.dano / 2; break;
+    }
+
+    if(state.money >= cost) {
+      state.money -= cost;
+      state.health -= effect;
+      s.done = true;
+      state.current++;
+      if(state.current >= 20) {
+        state.day++;
+        state.money += 1500;
+        initField();
+      }
+      render();
+    } else alert("CAPITAL INSUFICIENTE!");
+  }
+</script>
+</body>
+</html>
