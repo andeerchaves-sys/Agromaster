@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AgroMaster - Estação Experimental V4.7</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    :root{
+      --retro-black:#121212;
+      --ui-gray:#f1f5f9;
+      --legendary-gold:#fbbf24;
+
+      --soil-brown:#7a4f2a;
+      --soil-brown-2:#5a3a1f;
+      --field-green:#1b5e20;
+
+      --type-insect:#60a5fa;   /* azul */
+      --type-disease:#f87171;  /* vermelho */
+      --type-weed:#34d399;     /* verde */
+      --type-clean:#94a3b8;    /* cinza */
+
+      --ui-blue:#3b82f6;
+      --ui-red:#dc2626;
+      --ui-green:#16a34a;
+    }
+
+    *{ box-sizing:border-box; touch-action:manipulation; }
+    body{
+      background:
+        radial-gradient(circle at 25% 20%, rgba(59,130,246,0.15), transparent 45%),
+        radial-gradient(circle at 80% 30%, rgba(34,197,94,0.12), transparent 45%),
+        radial-gradient(circle at 60% 85%, rgba(251,191,36,0.10), transparent 55%),
+        #020617;
+      font-family:'Press Start 2P', cursive;
+      margin:0;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      padding:10px;
+      overflow-x:hidden;
+    }
+
+    /* “pixel vibe” */
+    .pixel{
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+
+    #master-container{
+      width:100%;
+      max-width:1600px;
+      height:98vh;
+      background:#fff;
+      border:10px solid var(--retro-black);
+      display:flex;
+      flex-direction:column;
+      padding:25px;
+      box-shadow:20px 20px 0 rgba(0,0,0,0.55);
+      position:relative;
+      overflow:hidden;
+    }
+
+    /* micro “scanlines” (bem leve) */
+    #master-container::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: repeating-linear-gradient(
+        to bottom,
+        rgba(0,0,0,0.035) 0px,
+        rgba(0,0,0,0.035) 1px,
+        transparent 2px,
+        transparent 4px
+      );
+      pointer-events:none;
+      mix-blend-mode:multiply;
+      opacity:0.35;
+    }
+
+    .top-bar{
+      height:118px;
+      background:#0f172a;
+      border:6px solid var(--retro-black);
+      margin-bottom:20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 22px;
+      color:white;
+      gap:16px;
+      position:relative;
+      z-index:2;
+    }
+
+    .hud-mini{
+      font-size:10px;
+      line-height:1.55;
+      color:#cbd5e1;
+    }
+    .hud-mini strong{ color:#fff; }
+
+    .health-bar-bg{
+      width:45%;
+      height:30px;
+      background:#000;
+      border:3px solid #fff;
+      position:relative;
+    }
+    #health-fill{
+      height:100%;
+      width:100%;
+      background: linear-gradient(90deg, #dc2626, #f59e0b, #10b981);
+      transition:width 0.28s ease;
+    }
+
+    .top-actions{
+      display:flex;
+      gap:10px;
+      align-items:center;
+    }
+
+    .btn-mini{
+      border:4px solid #000;
+      background:#fff;
+      color:#000;
+      font-size:10px;
+      padding:10px 12px;
+      box-shadow:5px 5px 0 #000;
+      cursor:pointer;
+      user-select:none;
+      transition:transform 0.08s, box-shadow 0.08s, filter 0.08s;
+      white-space:nowrap;
+    }
+    .btn-mini:hover{ transform:translate(-2px,-2px); box-shadow:7px 7px 0 #000; filter:brightness(1.05); }
+    .btn-mini:active{ transform:translate(3px,3px); box-shadow:0 0 0 #000; }
+
+    .game-content{
+      display:flex;
+      flex:1;
+      gap:25px;
+      min-height:0;
+      position:relative;
+      z-index:2;
+    }
+
+    .field-area{
+      flex:1.6;
+      background: var(--field-green);
+      border:8px solid var(--retro-black);
+      padding:20px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: inset 0 0 50px rgba(0,0,0,0.65);
+    }
+
+    .grid-container{
+      display:grid;
+      grid-template-columns:repeat(4, 1fr);
+      grid-template-rows:repeat(3, 1fr);
+      gap:18px;
+      width:100%;
+      height:100%;
+    }
+
+    .parcela{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.06), transparent 55%),
+        linear-gradient(180deg, var(--soil-brown), var(--soil-brown-2));
+      border:6px solid #2b1b10;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      cursor:pointer;
+      overflow:hidden;
+      transition:transform 0.08s, filter 0.08s;
+      user-select:none;
+    }
+    .parcela:hover{ filter:brightness(1.15); }
+    .parcela:active{ transform:scale(0.96); }
+
+    .parcela.active{
+      border:10px solid var(--ui-blue);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.75);
+      z-index:10;
+    }
+
+    .parcela.done{
+      background: linear-gradient(180deg, #065f46, #064e3b) !important;
+      border-color:#052e16 !important;
+      cursor:default;
+      filter:none;
+    }
+
+    /* Badge tipo */
+    .badge{
+      position:absolute;
+      top:8px;
+      left:8px;
+      font-size:10px;
+      padding:4px 6px;
+      border:3px solid #000;
+      background:#fff;
+      z-index:2;
+      text-transform:uppercase;
+    }
+    .badge.clean{ background: var(--type-clean); }
+    .badge.I{ background: var(--type-insect); }
+    .badge.D{ background: var(--type-disease); }
+    .badge.W{ background: var(--type-weed); }
+
+    /* Tag lendária */
+    .legend-tag{
+      position:absolute;
+      bottom:8px;
+      right:8px;
+      font-size:9px;
+      padding:4px 6px;
+      border:3px solid #000;
+      z-index:2;
+    }
+    .legend-tag.I{ background: var(--type-insect); }
+    .legend-tag.D{ background: var(--type-disease); }
+    .legend-tag.W{ background: var(--type-weed); }
+
+    /* Auras lendárias por tipo */
+    .parcela.legendary{
+      animation: auraPulse 1.15s ease-in-out infinite;
+    }
+    .parcela.legendary.I{
+      border-color:#0b2a55;
+      box-shadow:
+        0 0 0 3px rgba(96,165,250,0.35),
+        0 0 20px rgba(96,165,250,0.65),
+        0 0 42px rgba(59,130,246,0.45);
+    }
+    .parcela.legendary.D{
+      border-color:#4a0d0d;
+      box-shadow:
+        0 0 0 3px rgba(248,113,113,0.35),
+        0 0 20px rgba(248,113,113,0.70),
+        0 0 42px rgba(220,38,38,0.45);
+    }
+    .parcela.legendary.W{
+      border-color:#064e3b;
+      box-shadow:
+        0 0 0 3px rgba(52,211,153,0.32),
+        0 0 20px rgba(52,211,153,0.60),
+        0 0 42px rgba(22,163,74,0.45);
+    }
+    @keyframes auraPulse{
+      0%,100%{ filter:brightness(1.0); }
+      50%{ filter:brightness(1.12); }
+    }
+
+    .emoji{
+      font-size:3.2rem;
+      filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.65));
+    }
+    .emoji.dim{ opacity:0.35; }
+
+    /* Animações rápidas de feedback */
+    .parcela.scan{ animation: scan 420ms ease; }
+    .parcela.good{ animation: good 420ms ease; }
+    .parcela.bad{  animation: bad  420ms ease; }
+    @keyframes scan{ 0%{transform:scale(1)} 50%{transform:scale(1.04)} 100%{transform:scale(1)} }
+    @keyframes good{ 0%{filter:brightness(1)} 55%{filter:brightness(1.7)} 100%{filter:brightness(1)} }
+    @keyframes bad{
+      0%{transform:translateX(0)}
+      20%{transform:translateX(-7px)}
+      40%{transform:translateX(7px)}
+      60%{transform:translateX(-5px)}
+      80%{transform:translateX(5px)}
+      100%{transform:translateX(0)}
+    }
+
+    .float-pop{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform:translate(-50%,-50%);
+      padding:8px 10px;
+      border:4px solid #000;
+      font-size:10px;
+      z-index:5;
+      animation: pop 900ms ease forwards;
+      white-space:nowrap;
+      pointer-events:none;
+    }
+    @keyframes pop{
+      0%{ opacity:0; transform:translate(-50%,-25%) scale(0.95); }
+      20%{ opacity:1; transform:translate(-50%,-60%) scale(1.03); }
+      100%{ opacity:0; transform:translate(-50%,-125%) scale(1.0); }
+    }
+
+    .control-panel{
+      flex:1;
+      display:flex;
+      flex-direction:column;
+      gap:20px;
+      min-height:0;
+    }
+    .box{
+      border:8px solid var(--retro-black);
+      background:var(--ui-gray);
+      display:flex;
+      flex-direction:column;
+      min-height:0;
+    }
+    .box-header{
+      background:var(--retro-black);
+      color:white;
+      padding:15px;
+      font-size:12px;
+      text-align:center;
+    }
+    #diagnostico-content{
+      flex:0 0 40%;
+      padding:20px;
+      background:#fff;
+      font-size:13px;
+      line-height:1.7;
+      overflow-y:auto;
+    }
+    #intervencoes-content{
+      flex:1;
+      padding:15px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow-y:auto;
+      background:#e2e8f0;
+    }
+
+    .btn-action{
+      background:white;
+      border:5px solid var(--retro-black);
+      padding:18px 15px;
+      font-size:10px;
+      font-weight:bold;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      cursor:pointer;
+      box-shadow:6px 6px 0 var(--retro-black);
+      transition:transform 0.08s, box-shadow 0.08s, background 0.08s;
+    }
+    .btn-action:hover{
+      background:#f8fafc;
+      transform:translate(-2px,-2px);
+      box-shadow:8px 8px 0 var(--retro-black);
+    }
+    .btn-action:active{
+      transform:translate(4px,4px);
+      box-shadow:0 0 0;
+    }
+    .price-tag{ color:#15803d; font-size:14px; }
+
+    #login-screen{
+      position:fixed;
+      inset:0;
+      background:#020617;
+      z-index:1000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .login-box{
+      background:white;
+      border:12px solid black;
+      padding:50px;
+      width:90%;
+      max-width:600px;
+      text-align:center;
+      box-shadow:25px 25px 0 #16a34a;
+    }
+
+    /* Modal do Banco */
+    #bank-modal{
+      position:fixed;
+      inset:0;
+      background:rgba(2,6,23,0.75);
+      z-index:1200;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+    }
+    .bank-box{
+      width:100%;
+      max-width:720px;
+      background:#fff;
+      border:10px solid #000;
+      box-shadow:18px 18px 0 rgba(0,0,0,0.65);
+      padding:22px;
+    }
+    .bank-title{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:12px;
+    }
+    .bank-title h2{ font-size:14px; margin:0; }
+    .bank-close{
+      border:4px solid #000;
+      background:#fee2e2;
+      padding:10px 12px;
+      font-size:10px;
+      box-shadow:5px 5px 0 #000;
+      cursor:pointer;
+    }
+    .bank-row{
+      display:flex;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-top:14px;
+    }
+    .bank-card{
+      flex:1 1 220px;
+      border:6px solid #000;
+      background:#f8fafc;
+      padding:14px;
+    }
+    .bank-card h3{ font-size:11px; margin:0 0 10px 0; }
+    .bank-card p{ font-size:10px; line-height:1.6; margin:0 0 12px 0; color:#334155; }
+    .bank-btn{
+      width:100%;
+      border:5px solid #000;
+      background:#fff;
+      padding:12px 10px;
+      font-size:10px;
+      box-shadow:6px 6px 0 #000;
+      cursor:pointer;
+    }
+    .bank-btn:hover{ transform:translate(-2px,-2px); box-shadow:8px 8px 0 #000; }
+    .bank-btn:active{ transform:translate(4px,4px); box-shadow:0 0 0 #000; }
+
+    @media (max-width:1024px){
+      #master-container{ height:auto; min-height:100vh; }
+      .game-content{ flex-direction:column; }
+      .field-area{ height:60vh; flex:none; }
+      .health-bar-bg{ width:52%; }
+      .top-bar{ height:auto; padding:14px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="login-screen">
+    <div class="login-box">
+      <h1 class="text-3xl mb-4 text-green-700 font-bold">AGROMASTER V4.7</h1>
+      <p class="text-xs mb-10 text-gray-500 uppercase">Gestão de Alvos Fitossanitários</p>
+      <input type="text" id="user-name" placeholder="NOME DO ENGENHEIRO" class="w-full border-4 border-black p-5 mb-8 text-center text-lg outline-none uppercase font-bold">
+      <button onclick="startGame()" class="w-full bg-green-600 text-white border-4 border-black p-5 text-lg shadow-[8px_8px_0_#000] hover:bg-green-700 active:translate-y-2">INICIAR OPERAÇÃO</button>
+      <p class="text-[10px] mt-6 text-gray-500">Dica: clique no talhão ativo para INSPECIONAR.</p>
+    </div>
+  </div>
+
+  <!-- MODAL BANCO -->
+  <div id="bank-modal">
+    <div class="bank-box">
+      <div class="bank-title">
+        <h2>🏦 BANCO RURAL — CRÉDITO & DÍVIDA</h2>
+        <button class="bank-close" onclick="closeBank()">FECHAR</button>
+      </div>
+
+      <div style="border:6px solid #000; background:#fff; padding:14px; font-size:10px; line-height:1.7;">
+        <div>📌 Dinheiro disponível: <b>$<span id="bank-money">0</span></b></div>
+        <div>📌 Dívida atual: <b>$<span id="bank-debt">0</span></b></div>
+        <div>📌 Juros por safra: <b><span id="bank-interest">0</span>%</b> (aplicado ao iniciar uma nova safra)</div>
+        <div style="margin-top:10px; color:#334155;">
+          Manejo inadequado gera prejuízo na prática. Aqui você pode “sobreviver” via crédito, mas a dívida cresce.
+        </div>
+      </div>
+
+      <div class="bank-row">
+        <div class="bank-card">
+          <h3>EMPRÉSTIMO RÁPIDO</h3>
+          <p>Receba dinheiro agora. A dívida aumenta e sofrerá juros a cada safra.</p>
+          <button class="bank-btn" onclick="takeLoan(500)">PEGAR $500</button>
+          <div style="height:8px"></div>
+          <button class="bank-btn" onclick="takeLoan(1000)">PEGAR $1000</button>
+        </div>
+
+        <div class="bank-card">
+          <h3>CRÉDITO SAFRA</h3>
+          <p>Valor maior. Ideal quando os chefões aparecem e o caixa aperta.</p>
+          <button class="bank-btn" onclick="takeLoan(2000)">PEGAR $2000</button>
+          <div style="height:8px"></div>
+          <button class="bank-btn" onclick="takeLoan(3500)">PEGAR $3500</button>
+        </div>
+
+        <div class="bank-card">
+          <h3>AMORTIZAR DÍVIDA</h3>
+          <p>Pague parte da dívida usando seu dinheiro disponível.</p>
+          <button class="bank-btn" onclick="payDebt(300)">PAGAR $300</button>
+          <div style="height:8px"></div>
+          <button class="bank-btn" onclick="payDebt(1000)">PAGAR $1000</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px; font-size:10px; color:#334155; line-height:1.6;">
+        ⚠️ Dica de jogo: quanto maior a dívida, mais você vira refém do crédito. Tente reduzir custo desnecessário (tratar talhão limpo).
+      </div>
+    </div>
+  </div>
+
+  <div id="master-container" style="display:none;">
+    <div class="top-bar">
+      <div class="text-[12px]">
+        OPERADOR: <span id="ui-user" class="text-green-400 font-bold">---</span><br>
+        SAFRA ATUAL: <span id="ui-ciclo">1</span>/15
+        <div class="hud-mini mt-2">
+          TALHÃO: <strong><span id="ui-plot">1</span>/12</strong><br>
+          CHEFÕES NA FASE: <strong><span id="ui-legcount">0</span></strong>
+        </div>
+      </div>
+
+      <div class="health-container w-1/2 flex flex-col items-center">
+        <div class="text-[10px] mb-2 uppercase tracking-widest">Vigor da Lavoura</div>
+        <div class="health-bar-bg"><div id="health-fill"></div></div>
+      </div>
+
+      <div class="text-right text-[12px]">
+        CAIXA<br>
+        <span class="text-green-400 text-2xl font-bold">$<span id="ui-money">2500</span></span>
+        <div class="hud-mini mt-2">
+          DÍVIDA: <strong>$<span id="ui-debt">0</span></strong><br>
+          JUROS: <strong><span id="ui-interest">0</span>%</strong>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn-mini" onclick="openBank()">🏦 BANCO</button>
+      </div>
+    </div>
+
+    <div class="game-content">
+      <div class="field-area">
+        <div id="grid" class="grid-container"></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="box" style="flex: 0 0 40%;">
+          <div class="box-header uppercase tracking-tighter">Relatório de Inspeção de Campo</div>
+          <div id="diagnostico-content"></div>
+        </div>
+
+        <div class="box" style="flex: 1;">
+          <div class="box-header uppercase tracking-tighter">Protocolos de Intervenção</div>
+          <div id="intervencoes-content">
+            <button class="btn-action" onclick="apply('bio')"><span>🦠 BIO-TECNOLOGIA</span> <span class="price-tag">$150</span></button>
+            <button class="btn-action" onclick="apply('ins_s')"><span>🧪 INSETICIDA SELETIVO</span> <span class="price-tag">$300</span></button>
+            <button class="btn-action" onclick="apply('ins_n')"><span>☢️ INSETICIDA AMPLO</span> <span class="price-tag">$180</span></button>
+            <button class="btn-action" onclick="apply('fun')"><span>🍄 FUNGICIDA SISTÊMICO</span> <span class="price-tag">$400</span></button>
+            <button class="btn-action" onclick="apply('her')"><span>🍂 HERBICIDA PÓS-EMERG.</span> <span class="price-tag">$280</span></button>
+            <button class="btn-action" onclick="apply('h2o')"><span>💧 MANEJO HÍDRICO</span> <span class="price-tag">$120</span></button>
+            <button class="btn-action" onclick="apply('nut')"><span>💎 FERTIRRIGAÇÃO NPK</span> <span class="price-tag">$220</span></button>
+            <button class="btn-action bg-red-100 border-red-800 text-red-800" onclick="apply('skip')"><span>⏭️ PROSSEGUIR SEM AÇÃO</span> <span>$0</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* =========================
+   CATÁLOGO
+   ========================= */
+const DB = [
+  // Comuns
+  { id:"clean", name:"Soja Saudável", type:"N", desc:"Equilíbrio ecossistêmico. Ausência de patógenos/pragas.", baseDamage:0, nde:0, emoji:"🌱", legendary:false },
+
+  { id:"lagarta", name:"Lagarta do Cartucho", type:"I", desc:"Spodoptera frugiperda. Raspagem foliar e dano no cartucho.", baseDamage:30, nde:15, emoji:"🐛", legendary:false },
+  { id:"percevejo", name:"Percevejo Marrom", type:"I", desc:"Euschistus heros. Picadas de sucção e abortamento de estruturas.", baseDamage:20, nde:8, emoji:"🪲", legendary:false },
+  { id:"amargoso", name:"Capim Amargoso", type:"W", desc:"Digitaria insularis. Matocompetição agressiva e resistência.", baseDamage:35, nde:12, emoji:"🌾", legendary:false },
+  { id:"antracnose", name:"Antracnose", type:"D", desc:"Colletotrichum truncatum. Lesões e comprometimento de vagens.", baseDamage:28, nde:10, emoji:"🍂", legendary:false },
+
+  // Lendárias (chefões)
+  { id:"ferrugem", name:"Ferrugem Asiática", type:"D", desc:"Phakopsora pachyrhizi. Pressão severa, risco de desfolha.", baseDamage:48, nde:5, emoji:"🦠", legendary:true },
+  { id:"mancha", name:"Mancha Alvo", type:"D", desc:"Corynespora cassiicola. Lesões concêntricas, alta pressão.", baseDamage:38, nde:15, emoji:"🎯", legendary:true },
+  { id:"mosca", name:"Mosca Branca", type:"I", desc:"Bemisia tabaci. Vetor de viroses e fumagina. Difícil controle.", baseDamage:45, nde:10, emoji:"🪰", legendary:true },
+];
+
+const COSTS = { bio:150, ins_s:300, ins_n:180, fun:400, her:280, h2o:120, nut:220, skip:0 };
+
+function pickRandom(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+function rollDamage(base){
+  if(base <= 0) return 0;
+  return Math.max(1, Math.floor(base * (0.8 + Math.random() * 0.5)));
+}
+
+/* =========================
+   ESTADO DO JOGO
+   ========================= */
+let game = {
+  user: "",
+  money: 2500,
+  debt: 0,
+  cycle: 1,
+  health: 100,
+  slots: [],
+  currentIdx: 0,
+  legendsThisPhase: 0,
+  interestRate: 0.12 // base 12% por safra (vai aumentar um pouco)
+};
+
+const HIDDEN_EMOJI = "❓";
+
+function startGame(){
+  const name = document.getElementById('user-name').value;
+  if(!name) return;
+  game.user = name.toUpperCase();
+  document.getElementById('ui-user').innerText = game.user;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('master-container').style.display = 'flex';
+  initField();
+}
+
+/* =========================
+   PROGRESSÃO (mais pragas/chefões com o ciclo)
+   ========================= */
+function phaseConfigForCycle(cycle){
+  const pestChance = clamp(0.55 + (cycle * 0.02), 0.55, 0.88);
+
+  // Quantidade de chefões cresce com o ciclo
+  const maxLegends = clamp(Math.floor((cycle - 1) / 3) + 1, 1, 5); // 1..5
+  const legendsThisPhase = Math.floor(Math.random() * (maxLegends + 1)); // 0..max
+
+  // Chefão custa/pune mais com o tempo (para ser “gasto absurdo”)
+  const legendCostMult = clamp(2.6 + (cycle * 0.10), 2.6, 4.2);
+  const legendRiskMult = clamp(2.1 + (cycle * 0.07), 2.1, 3.4);
+
+  // Juros sobem ao longo do jogo (simula banco pressionando)
+  const interestRate = clamp(0.12 + (cycle * 0.005), 0.12, 0.20);
+
+  return { pestChance, maxLegends, legendsThisPhase, legendCostMult, legendRiskMult, interestRate };
+}
+
+function applyInterestAtNewSafra(){
+  // juros só se tiver dívida
+  if(game.debt > 0){
+    const juros = Math.floor(game.debt * game.interestRate);
+    game.debt += juros;
+  }
+}
+
+function initField(){
+  const total = 12;
+  const commons = DB.filter(x => !x.legendary);
+  const legends = DB.filter(x => x.legendary);
+
+  const cfg = phaseConfigForCycle(game.cycle);
+  game.legendsThisPhase = cfg.legendsThisPhase;
+  game.interestRate = cfg.interestRate;
+
+  // escolhe quais índices serão lendários (chefões)
+  const legendSlots = new Set();
+  while(legendSlots.size < cfg.legendsThisPhase){
+    legendSlots.add(Math.floor(Math.random() * total));
+  }
+
+  game.slots = Array.from({length: total}, (_, i) => {
+    const isLegend = legendSlots.has(i);
+    let target;
+
+    if(isLegend){
+      target = pickRandom(legends);
+    } else {
+      if(Math.random() < cfg.pestChance){
+        const commonsNoClean = commons.filter(x => x.type !== "N");
+        target = pickRandom(commonsNoClean);
+      } else {
+        target = commons.find(x => x.type === "N") || pickRandom(commons);
+      }
+    }
+
+    return {
+      ...target,
+      plotId: i + 1,
+      damage: rollDamage(target.baseDamage),
+      done: false,
+      seen: false
+    };
+  });
+
+  game.currentIdx = 0;
+  render();
+}
+
+/* =========================
+   UI - BANCO
+   ========================= */
+function openBank(){
+  document.getElementById("bank-modal").style.display = "flex";
+  refreshBankUI();
+}
+function closeBank(){
+  document.getElementById("bank-modal").style.display = "none";
+}
+function refreshBankUI(){
+  document.getElementById("bank-money").innerText = game.money;
+  document.getElementById("bank-debt").innerText = game.debt;
+  document.getElementById("bank-interest").innerText = Math.round(game.interestRate * 100);
+}
+
+function takeLoan(amount){
+  // limite simples para não quebrar a simulação
+  const maxDebt = 25000;
+  if(game.debt + amount > maxDebt){
+    alert("LIMITE DE CRÉDITO ATINGIDO!");
+    return;
+  }
+  game.money += amount;
+  game.debt += amount;
+  refreshBankUI();
+  render();
+}
+
+function payDebt(amount){
+  if(game.debt <= 0){
+    alert("VOCÊ NÃO TEM DÍVIDA.");
+    return;
+  }
+  const pay = Math.min(amount, game.debt, game.money);
+  if(pay <= 0){
+    alert("CAIXA INSUFICIENTE PARA PAGAR.");
+    return;
+  }
+  game.money -= pay;
+  game.debt -= pay;
+  refreshBankUI();
+  render();
+}
+
+/* =========================
+   RENDER
+   ========================= */
+function render(){
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+
+  game.slots.forEach((s, i) => {
+    const div = document.createElement('div');
+
+    const classes = ["parcela", "pixel"];
+    if(i === game.currentIdx) classes.push("active");
+    if(s.done) classes.push("done");
+    if(!s.done && s.legendary) classes.push("legendary", s.type);
+
+    div.className = classes.join(" ");
+
+    // badge tipo
+    const badge = document.createElement('div');
+    badge.className = "badge " + (s.type === "N" ? "clean" : s.type);
+    badge.textContent = (s.type === "N") ? "OK" : s.type;
+    div.appendChild(badge);
+
+    // lendária tag
+    if(!s.done && s.legendary){
+      const lt = document.createElement('div');
+      lt.className = "legend-tag " + s.type;
+      lt.textContent = "CHEFÃO";
+      div.appendChild(lt);
+    }
+
+    // conteúdo central
+    const center = document.createElement('div');
+    if(s.done){
+      center.innerHTML = `<span class="emoji">✅</span>`;
+    } else if(s.seen){
+      center.innerHTML = `<span class="emoji">${s.emoji || "🧩"}</span>`;
+    } else {
+      center.innerHTML = `<span class="emoji dim">${HIDDEN_EMOJI}</span>`;
+    }
+    div.appendChild(center);
+
+    // clique: só inspeciona se for o atual
+    div.onclick = () => {
+      if(i === game.currentIdx && !s.done){
+        s.seen = true;
+        div.classList.remove("scan"); void div.offsetWidth; div.classList.add("scan");
+        render();
+      }
+    };
+
+    grid.appendChild(div);
+  });
+
+  document.getElementById('ui-money').innerText = game.money;
+  document.getElementById('ui-debt').innerText = game.debt;
+  document.getElementById('ui-interest').innerText = Math.round(game.interestRate * 100);
+  document.getElementById('ui-ciclo').innerText = game.cycle;
+  document.getElementById('ui-plot').innerText = (game.currentIdx + 1);
+  document.getElementById('ui-legcount').innerText = game.legendsThisPhase;
+  document.getElementById('health-fill').style.width = clamp(game.health, 0, 100) + "%";
+
+  // se modal aberto, atualiza também
+  if(document.getElementById("bank-modal").style.display === "flex"){
+    refreshBankUI();
+  }
+
+  updateReport();
+}
+
+function updateReport(){
+  const box = document.getElementById('diagnostico-content');
+  const s = game.slots[game.currentIdx];
+
+  if(!s){
+    box.innerHTML = "<div class='text-center py-10 font-bold'>SAFRA ENCERRADA</div>";
+    return;
+  }
+
+  if(!s.seen){
+    box.innerHTML = `<div class='h-full flex items-center justify-center text-gray-400 text-center uppercase p-4'>
+      Clique no TALHÃO ${s.plotId} para inspeção...
+    </div>`;
+    return;
+  }
+
+  const cfg = phaseConfigForCycle(game.cycle);
+  const costMult = s.legendary ? cfg.legendCostMult : 1.0;
+
+  const urgency = s.legendary
+    ? `<span class="bg-yellow-400 text-[8px] p-1 border-2 border-black">ALVO LENDÁRIO</span>`
+    : `<span class="bg-slate-200 text-[8px] p-1 border-2 border-black">COMUM</span>`;
+
+  box.innerHTML = `
+    <div class="border-b-4 border-black pb-2 mb-3 flex justify-between items-center">
+      <span class="font-bold text-lg">TALHÃO Q-${s.plotId}</span>
+      ${urgency}
+    </div>
+
+    <div class="text-green-800 font-bold mb-2 uppercase text-base">${s.name}</div>
+
+    <div class="grid grid-cols-2 gap-3 mb-4">
+      <div class="bg-slate-100 p-3 border-l-8 border-slate-700">
+        <span class="text-[10px] block">TIPO</span>
+        <span class="text-xl font-bold">${(s.type === "N") ? "LIMPO" : s.type}</span>
+      </div>
+      <div class="bg-red-100 p-3 border-l-8 border-red-600">
+        <span class="text-[10px] block">INFESTAÇÃO</span>
+        <span class="text-2xl font-bold text-red-700">${s.damage}%</span>
+        <div class="text-[9px] mt-1">NDE: ${s.nde}%</div>
+      </div>
+    </div>
+
+    <div class="bg-white border-4 border-black p-3 mb-4">
+      <div class="text-[10px] uppercase text-slate-500 mb-1">Observações técnicas</div>
+      <div class="text-gray-700 text-xs leading-relaxed">${s.desc}</div>
+    </div>
+
+    <div class="bg-slate-50 border-4 border-black p-3">
+      <div class="text-[10px] uppercase text-slate-500 mb-1">Impacto econômico</div>
+      <div class="text-xs leading-relaxed">
+        ${s.legendary ? `⚠️ Chefão: custos de intervenção ~ <b>${costMult.toFixed(1)}x</b> nesta safra.` : `Custos padrão nesta safra.`}
+      </div>
+      <div class="text-[10px] mt-2 text-slate-600">
+        Regra do jogo: você só perde quando o <b>VIGOR</b> chega a 0. O dinheiro pode ser reforçado via <b>BANCO</b> (dívida com juros).
+      </div>
+    </div>
+  `;
+}
+
+/* =========================
+   FEEDBACK VISUAL
+   ========================= */
+function showPopupOnCurrent(text, good=true){
+  const grid = document.getElementById('grid');
+  const idx = game.currentIdx;
+  const div = grid.children[idx];
+  if(!div) return;
+
+  const pop = document.createElement('div');
+  pop.className = "float-pop";
+  pop.style.background = good ? "#dcfce7" : "#fee2e2";
+  pop.textContent = text;
+  div.appendChild(pop);
+
+  setTimeout(() => { if(pop && pop.parentNode) pop.parentNode.removeChild(pop); }, 950);
+
+  div.classList.remove(good ? "good" : "bad");
+  void div.offsetWidth;
+  div.classList.add(good ? "good" : "bad");
+}
+
+/* =========================
+   APLICAÇÃO DE PROTOCOLOS
+   ========================= */
+function apply(type){
+  const s = game.slots[game.currentIdx];
+  if(!s || !s.seen || s.done) return;
+
+  const cfg = phaseConfigForCycle(game.cycle);
+  const isLegend = !!s.legendary;
+  const costMult = isLegend ? cfg.legendCostMult : 1.0;
+  const riskMult = isLegend ? cfg.legendRiskMult : 1.0;
+
+  let cost = Math.floor((COSTS[type] ?? 0) * costMult);
+  let stress = 0;
+  let solved = false;
+
+  // LIMPO: ignorar não pune; tratar só gasta dinheiro (simula erro de manejo)
+  if(s.type === "N"){
+    if(type === "skip"){
+      cost = 0; stress = 0; solved = true;
+    } else {
+      stress = 0; solved = true;
+    }
+  } else {
+    // tem alvo real
+    if(type === 'bio'){ if(s.type === 'I') solved = true; stress = 2; }
+    else if(type === 'ins_s'){ if(s.type === 'I') solved = true; stress = 5; }
+    else if(type === 'ins_n'){ if(s.type === 'I') solved = true; stress = 25; }
+    else if(type === 'fun'){ if(s.type === 'D') solved = true; stress = 7; }
+    else if(type === 'her'){ if(s.type === 'W') solved = true; stress = 12; }
+    else if(type === 'h2o'){ solved = false; stress = 2; game.health = Math.min(100, game.health + 8); }
+    else if(type === 'nut'){ solved = false; stress = 1; game.health = Math.min(100, game.health + 12); }
+    else if(type === 'skip'){
+      stress = (s.damage > s.nde) ? Math.floor((s.damage / 1.5) * riskMult) : 0;
+      solved = true; // encerra talhão mesmo assim
+    }
+  }
+
+  // dinheiro pode faltar, mas jogador pode ir ao banco (não é game over)
+  if(game.money < cost){
+    alert("CAIXA INSUFICIENTE! Abra o BANCO para crédito.");
+    return;
+  }
+
+  game.money -= cost;
+
+  // impacto no vigor
+  if(s.type !== "N"){
+    if(type !== "skip"){
+      if(solved){
+        game.health -= Math.floor(stress * (isLegend ? 1.25 : 1.0));
+      } else {
+        game.health -= Math.floor((stress + (s.damage / 2)) * riskMult);
+      }
+    } else {
+      game.health -= Math.floor(stress);
+    }
+  }
+
+  game.health = clamp(game.health, 0, 100);
+
+  // feedback popup
+  if(s.type === "N"){
+    if(type === "skip") showPopupOnCurrent("+0 (OK)", true);
+    else showPopupOnCurrent(`-$${cost} (desnecessário)`, false);
+  } else {
+    if(type === "skip"){
+      showPopupOnCurrent(stress > 0 ? `Ignorado! -Vigor` : "Ignorado (sem perda)", stress === 0);
+    } else {
+      showPopupOnCurrent(solved ? `Tratado ✔  -$${cost}` : `Erro ✖  -$${cost}`, solved);
+    }
+  }
+
+  // encerra talhão e avança
+  s.done = true;
+  game.currentIdx++;
+
+  // derrota SÓ por vigor
+  if(game.health <= 0){
+    alert("OPERAÇÃO ENCERRADA: VIGOR ESGOTADO!");
+    // reset simples
+    game.money = 2500; game.debt = 0; game.health = 100; game.cycle = 1;
+    initField();
+    return;
+  }
+
+  // terminou fase/safra
+  if(game.currentIdx >= game.slots.length){
+    // fecha safra: aplica juros da dívida
+    applyInterestAtNewSafra();
+
+    // bônus leve por “boa condução” (vigor alto ajuda)
+    const bonus = Math.floor(game.health * 10);
+    game.money += bonus;
+
+    game.cycle++;
+    initField();
+    return;
+  }
+
+  render();
+}
+</script>
+</body>
+</html>
